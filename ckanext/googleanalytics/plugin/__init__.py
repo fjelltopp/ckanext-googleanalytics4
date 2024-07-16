@@ -12,7 +12,7 @@ import requests
 import ckan.lib.helpers as h
 import ckan.plugins as p
 import ckan.plugins.toolkit as tk
-from ckanext.googleanalytics.actions import resource_stat , package_stat
+from ckanext.googleanalytics.actions import resource_stat , package_stat, download_package_stat
 from ckan.exceptions import CkanVersionException
 import json
 
@@ -74,7 +74,8 @@ class GoogleAnalyticsPlugin(GAMixinPlugin, p.SingletonPlugin):
     def get_actions(self):
         return {
             'resource_stats': resource_stat,
-            'package_stats': package_stat
+            'package_stats': package_stat,
+            'download_package_stats': download_package_stat
         }
 
     def configure(self, config):
