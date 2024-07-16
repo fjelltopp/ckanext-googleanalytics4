@@ -9,7 +9,7 @@ from ckan.tests import conf_dir, url_for, CreateTestData
 from mockgoogleanalytics import runmockserver
 from ckanext.googleanalytics.commands import LoadAnalytics
 from ckanext.googleanalytics.commands import InitDB
-from ckanext.googleanalytics import dbutil
+from ckanext.googleanalytics.utils import db as db_utils
 import ckanext.googleanalytics.gasnippet as gasnippet
 
 
@@ -79,8 +79,8 @@ class TestLoadCommand(TestCase):
         command.TEST_HOST = MockClient("localhost", 6969)
         command.CONFIG = self.config
         command.run([])
-        packages = dbutil.get_top_packages()
-        resources = dbutil.get_top_resources()
+        packages = db_utils.get_top_packages()
+        resources = db_utils.get_top_resources()
         self.assertEquals(packages[0][1], 2)
         self.assertEquals(resources[0][1], 4)
 

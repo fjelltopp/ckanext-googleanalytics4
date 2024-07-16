@@ -7,7 +7,7 @@ import re
 import logging
 import click
 import ckan.model as model
-from . import dbutil
+from utils import db as db_utils
 from oauth2client.service_account import ServiceAccountCredentials
 from googleapiclient.discovery import build
 import httplib2
@@ -37,7 +37,7 @@ def init():
     """Initialise the local stats database tables"""
     model.Session.remove()
     model.Session.configure(bind=model.meta.engine)
-    dbutil.init_tables()
+    db_utils.init_tables()
     log.info("Set up statistics tables in main database")
 
 
@@ -278,7 +278,7 @@ def save_ga_data(packages_data):
             if not resource:
                 log.warning("Couldn't find resource %s" % resource_url)
                 continue
-            dbutil.update_resource_visits(resource.id, recently, ever)
+            db_utils.update_resource_visits(resource.id, recently, ever)
             log.info("Updated %s with %s visits" % (resource.id, visits))
         else:
             f = identifier.split("/dataset/")
@@ -294,7 +294,7 @@ def save_ga_data(packages_data):
             if not item:
                 log.warning("Couldn't find package %s" % package_name)
                 continue
-            dbutil.update_package_visits(item.id, recently, ever)
+            db_utils.update_package_visits(item.id, recently, ever)
             log.info("Updated %s with %s visits" % (item.id, visits))
     model.Session.commit()
 

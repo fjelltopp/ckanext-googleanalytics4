@@ -5,7 +5,6 @@ import logging
 import ckan.model as model
 
 log = logging.getLogger(__name__)
-# from ckan.model.authz import PSEUDO_USER__VISITOR
 from ckan.lib.base import *
 
 cached_tables = {}
@@ -151,4 +150,3 @@ def get_package_stat(package_id):
     ).where(package_stats.c.package_id == package_id)
     res = connection.execute(s).fetchone()
     return res
-    

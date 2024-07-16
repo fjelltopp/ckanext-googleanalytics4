@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 import logging
 from ckan.lib.base import BaseController, c, render, request
-from . import dbutil
+from utils import db as db_utils
 
 import ckan.logic as logic
 import hashlib
@@ -30,7 +30,7 @@ log = logging.getLogger("ckanext.googleanalytics")
 class GAController(BaseController):
     def view(self):
         # get package objects corresponding to popular GA content
-        c.top_resources = dbutil.get_top_resources(limit=10)
+        c.top_resources = db_utils.get_top_resources(limit=10)
         return render("summary.html")
 
 
