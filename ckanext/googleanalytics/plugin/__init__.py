@@ -1,31 +1,22 @@
 # -*- coding: utf-8 -*-
-from __future__ import absolute_import
 
-from six.moves.urllib.parse import urlencode
-import ast
-import logging
 import threading
-
-
 import requests
+import logging
+import json
+import ast
 
+from ckanext.googleanalytics.actions import resource_stat , package_stat
+from ckanext.googleanalytics.plugin.flask_plugin import GAMixinPlugin
+from six.moves.urllib.parse import urlencode
+import ckan.plugins.toolkit as tk
 import ckan.lib.helpers as h
 import ckan.plugins as p
-import ckan.plugins.toolkit as tk
-from ckanext.googleanalytics.actions import resource_stat , package_stat
-from ckan.exceptions import CkanVersionException
-import json
+
 
 DEFAULT_RESOURCE_URL_TAG = "/downloads/"
 
 log = logging.getLogger(__name__)
-
-try:
-    tk.requires_ckan_version("2.9")
-except CkanVersionException:
-    from ckanext.googleanalytics.plugin.pylons_plugin import GAMixinPlugin
-else:
-    from ckanext.googleanalytics.plugin.flask_plugin import GAMixinPlugin
 
 
 class GoogleAnalyticsException(Exception):
@@ -42,8 +33,7 @@ class AnalyticsPostThread(threading.Thread):
     def run(self):
         while True:
             data = self.queue.get()
-            if tk.config.get("googleanalytics.measurement_id"):
-                log.debug("Sending API event to Google Analytics: GA4")
+            log.debug("Sending API event to Google Analytics: GA4")
                 measure_id = tk.config.get("googleanalytics.measurement_id")
                 api_secret = tk.config.get("googleanalytics.api_secret")
                 res = requests.post(
@@ -51,17 +41,6 @@ class AnalyticsPostThread(threading.Thread):
                     data=json.dumps(data),
                     timeout=10,
                 )
-            else:
-                data = urlencode(data)
-                log.debug("Sending API event to Google Analytics: " + data)
-                # send analytics
-                res = requests.post(
-                    "http://www.google-analytics.com/collect",
-                    headers={'user-agent': 'CPython/2.7'},
-                    data=data,
-                    timeout=10,
-                )
-                # signals to queue job is done
             self.queue.task_done()
 
 

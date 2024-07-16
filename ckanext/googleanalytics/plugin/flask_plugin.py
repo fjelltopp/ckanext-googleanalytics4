@@ -14,11 +14,9 @@ class GAMixinPlugin(plugins.SingletonPlugin):
     analytics_queue = queue.Queue()
 
     # IBlueprint
-
     def get_blueprint(self):
         return [ga]
 
     # IClick
-
     def get_commands(self):
         return get_commands()

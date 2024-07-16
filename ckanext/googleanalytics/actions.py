@@ -5,6 +5,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
+
 @toolkit.side_effect_free
 def resource_stat(context, data_dict):
     '''
@@ -13,6 +14,7 @@ def resource_stat(context, data_dict):
     resource_id = data_dict['resource_id']
     result = db_utils.get_resource_stat(resource_id)[0]
     return json.dumps(result)
+
 
 @toolkit.side_effect_free
 def package_stat(context, data_dict):
@@ -25,5 +27,3 @@ def package_stat(context, data_dict):
     except Exception as e:
         log.error("Package not in package_stat: {}".format(e))
     return json.dumps(result)
-
-

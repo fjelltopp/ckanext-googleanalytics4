@@ -1,20 +1,16 @@
 from __future__ import absolute_import
-
-import logging
-from ckan.lib.base import BaseController, c, render, request
-from utils import db as db_utils
-
-import ckan.logic as logic
 import hashlib
-from . import plugin
-from pylons import config
+import logging
 
-from paste.util.multidict import MultiDict
-
-from ckan.controllers.api import ApiController
-
+from ckan.lib.base import BaseController, c, render, request
 from ckan.exceptions import CkanVersionException
+from ckan.controllers.api import ApiController
+from paste.util.multidict import MultiDict
 import ckan.plugins.toolkit as tk
+from utils import db as db_utils
+import ckan.logic as logic
+from pylons import config
+from . import plugin
 
 try:
     tk.requires_ckan_version("2.9")
@@ -22,7 +18,6 @@ except CkanVersionException:
     pass
 else:
     from builtins import str
-
 
 log = logging.getLogger("ckanext.googleanalytics")
 
