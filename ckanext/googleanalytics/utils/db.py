@@ -1,12 +1,20 @@
+import logging
+
 from sqlalchemy import Table, Column, Integer, String, MetaData
 from sqlalchemy.sql import select, text
 from sqlalchemy import func
-import logging
-import ckan.model as model
 
-log = logging.getLogger(__name__)
+import ckan.model as model
 from ckan.lib.base import *
 
+from . import (
+    RESOURCE_URL_REGEX, PACKAGE_URL,
+    _resource_url_tag,
+    _recent_view_days
+)
+
+
+log = logging.getLogger(__name__)
 cached_tables = {}
 
 
