@@ -34,13 +34,13 @@ class AnalyticsPostThread(threading.Thread):
         while True:
             data = self.queue.get()
             log.debug("Sending API event to Google Analytics: GA4")
-                measure_id = tk.config.get("googleanalytics.measurement_id")
-                api_secret = tk.config.get("googleanalytics.api_secret")
-                res = requests.post(
-                    "https://www.google-analytics.com/mp/collect?measurement_id={}&api_secret={}".format(measure_id, api_secret),
-                    data=json.dumps(data),
-                    timeout=10,
-                )
+            measure_id = tk.config.get("googleanalytics.measurement_id")
+            api_secret = tk.config.get("googleanalytics.api_secret")
+            res = requests.post(
+                "https://www.google-analytics.com/mp/collect?measurement_id={}&api_secret={}".format(measure_id, api_secret),
+                data=json.dumps(data),
+                timeout=10,
+            )
             self.queue.task_done()
 
 
@@ -62,10 +62,11 @@ class GoogleAnalyticsPlugin(GAMixinPlugin, p.SingletonPlugin):
         See IConfigurable.
 
         """
-        if "googleanalytics.id" not in config and "googleanalytics.measurement_id" not in config:
-            msg = "Missing googleanalytics.id or googleanalytics.measurement_id in config. One must be set."
+        if "googleanalytics.measurement_id" not in config:
+            msg = "Missing googleanalytics.measurement_id in config. One must be set."
             raise GoogleAnalyticsException(msg)
-        self.googleanalytics_id = config.get('googleanalytics.id')
+        # TODO: Do we still need to submit `gogleanalytics_id` separately?
+        self.googleanalytics_id = config.get('googleanalytics.measurement_id')
         self.googleanalytics_domain = config.get(
             "googleanalytics.domain", "auto"
         )

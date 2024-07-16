@@ -4,16 +4,15 @@ import hashlib
 import logging
 import six
 
-from flask import Blueprint
 from werkzeug.utils import import_string
-
-import ckan.logic as logic
+import ckan.views.resource as resource
 import ckan.plugins.toolkit as tk
 import ckan.views.api as api
-import ckan.views.resource as resource
+from flask import Blueprint
+import ckan.logic as logic
 import ckan.model as model
-
 from ckan.common import g
+
 
 CONFIG_HANDLER_PATH = "googleanalytics.download_handler"
 
@@ -32,7 +31,7 @@ def action(logic_function, ver=api.API_MAX_VERSION):
                 id = request_data["q"]
             if "query" in request_data:
                 id = request_data[u"query"]
-            _post_analytics(g.user, "CKAN API Request", logic_function, "", id)
+            _post_analytics(g.user)
     except Exception as e:
         log.debug(e)
         pass
@@ -63,7 +62,7 @@ ga.add_url_rule(
 
 def download(id, resource_id, filename=None, package_type="dataset"):
     try:
-        from ckanext.cloudstorage.views.resource_download import resource_download
+        from ckanext.blob_storage.blueprints import download
         handler_path = resource_download
     except ImportError:
         log.debug("Use default CKAN callback for resource.download")
@@ -97,61 +96,29 @@ ga.add_url_rule(
 )
 
 
-def _post_analytics(
-    user, event_type, request_obj_type, request_function, request_id
-):
-
+def _post_analytics(user):
     from ckanext.googleanalytics.plugin import GoogleAnalyticsPlugin
+    
+    path = tk.request.environ["PATH_INFO"]
+    path_id = path.split("/dataset/")[1].split("/")[0]
+    context = {
+        u'model': model,
+        u'session': model.Session,
+        u'user': user
+    }
+    package = tk.get_action("package_show")(context, {"id": path_id})
+    referer_link = "/dataset/{}".format(package.get("name"))
 
-    if tk.config.get("googleanalytics.measurement_id"):
-        data = {
-            "client_id": hashlib.md5(six.ensure_binary(tk.c.user)).hexdigest(),
-            "events": [
-                {
-                    "name": "file_download",
-                    "params" : {
-                        "link_url": tk.request.environ["PATH_INFO"]
-                    }
+    resource_data = {
+        "client_id": hashlib.md5(six.ensure_binary(tk.c.user)).hexdigest(),
+        "events": [
+            {
+                "name": "file_download",
+                "params" : {
+                    "link_url": referer_link
                 }
-            ]
-        }
-        
-        path = tk.request.environ["PATH_INFO"]
-        path_id = path.split("/dataset/")[1].split("/")[0]
-        context = {
-            u'model': model,
-            u'session': model.Session,
-            u'user': g.user
-        }
-        package = tk.get_action("package_show")(context, {"id": path_id})
-        referer_link = "/dataset/{}".format(package.get("name"))
+            }
+        ]
+    }
 
-        resource_data = {
-            "client_id": hashlib.md5(six.ensure_binary(tk.c.user)).hexdigest(),
-            "events": [
-                {
-                    "name": "file_download",
-                    "params" : {
-                        "link_url": referer_link
-                    }
-                }
-            ]
-        }
-
-        GoogleAnalyticsPlugin.analytics_queue.put(resource_data)
-
-    else:
-        data = {
-            "v": 1,
-            "tid": tk.config.get("googleanalytics.id"),
-            "cid": hashlib.md5(six.ensure_binary(tk.c.user)).hexdigest(),
-            # customer id should be obfuscated
-            "t": "event",
-            "dh": tk.request.environ["HTTP_HOST"],
-            "dp": tk.request.environ["PATH_INFO"],
-            "dr": tk.request.environ.get("HTTP_REFERER", ""),
-            "ec": event_type,
-            "ea": request_obj_type + request_function,
-            "el": request_id,
-        }
-    GoogleAnalyticsPlugin.analytics_queue.put(data)
+    GoogleAnalyticsPlugin.analytics_queue.put(resource_data)
