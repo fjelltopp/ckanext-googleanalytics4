@@ -6,7 +6,7 @@ import logging
 import json
 import ast
 
-from ckanext.googleanalytics.actions import resource_stat , package_stat
+from ckanext.googleanalytics.actions import resource_stat , package_stat, download_package_stat
 from ckanext.googleanalytics.plugin.flask_plugin import GAMixinPlugin
 from six.moves.urllib.parse import urlencode
 import ckan.plugins.toolkit as tk
@@ -53,7 +53,8 @@ class GoogleAnalyticsPlugin(GAMixinPlugin, p.SingletonPlugin):
     def get_actions(self):
         return {
             'resource_stats': resource_stat,
-            'package_stats': package_stat
+            'package_stats': package_stat,
+            'download_package_stats': download_package_stat
         }
 
     def configure(self, config):
