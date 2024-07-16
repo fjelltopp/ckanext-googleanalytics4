@@ -81,14 +81,12 @@ def get_resource_visits_for_url(url):
     return count and count[0] or ""
 
 
-""" get_top_packages is broken, and needs to be rewritten to work with
-CKAN 2.*. This is because ckan.authz has been removed in CKAN 2.*
-
-See commit ffa86c010d5d25fa1881c6b915e48f3b44657612
-"""
-
-
 def get_top_packages(limit=20):
+    """ get_top_packages is broken, and needs to be rewritten to work with
+    CKAN 2.*. This is because ckan.authz has been removed in CKAN 2.*
+
+    See commit ffa86c010d5d25fa1881c6b915e48f3b44657612
+    """
     items = []
     # caveat emptor: the query below will not filter out private
     # or deleted datasets (TODO)
@@ -150,3 +148,79 @@ def get_package_stat(package_id):
     ).where(package_stats.c.package_id == package_id)
     res = connection.execute(s).fetchone()
     return res
+
+
+def save_packages(packages_data, summary_date):
+    engine = model.meta.engine
+    # clear out existing data before adding new
+    sql = (
+        """DELETE FROM tracking_summary
+             WHERE tracking_date='%s'; """
+        % summary_date
+    )
+    engine.execute(sql)
+
+    for url, count in list(packages_data.items()):
+        # If it matches the resource then we should mark it as a resource.
+        # For resources we don't currently find the package ID.
+        if RESOURCE_URL_REGEX.match(url):
+            tracking_type = "resource"
+        else:
+            tracking_type = "page"
+
+        sql = """INSERT INTO tracking_summary
+                 (url, count, tracking_date, tracking_type)
+                 VALUES (%s, %s, %s, %s);"""
+        engine.execute(sql, url, count, summary_date, tracking_type)
+
+    # get ids for dataset urls
+    sql = """UPDATE tracking_summary t
+             SET package_id = COALESCE(
+                 (SELECT id FROM package p WHERE t.url =  %s || p.name)
+                 ,'~~not~found~~')
+             WHERE t.package_id IS NULL AND tracking_type = 'page';"""
+    engine.execute(sql, PACKAGE_URL)
+
+    # get ids for dataset edit urls which aren't captured otherwise
+    sql = """UPDATE tracking_summary t
+             SET package_id = COALESCE(
+                 (SELECT id FROM package p WHERE t.url =  %s || p.name)
+                 ,'~~not~found~~')
+             WHERE t.package_id = '~~not~found~~' AND tracking_type = 'page';"""
+    engine.execute(sql, "%sedit/" % PACKAGE_URL)
+
+    # update summary totals for resources
+    sql = """UPDATE tracking_summary t1
+             SET running_total = (
+                SELECT sum(count)
+                FROM tracking_summary t2
+                WHERE t1.url = t2.url
+                AND t2.tracking_date <= t1.tracking_date
+             ) + t1.count
+             ,recent_views = (
+                SELECT sum(count)
+                FROM tracking_summary t2
+                WHERE t1.url = t2.url
+                AND t2.tracking_date <= t1.tracking_date AND t2.tracking_date >= t1.tracking_date - %s
+             ) + t1.count
+             WHERE t1.running_total = 0 AND tracking_type = 'resource';"""
+    engine.execute(sql, _recent_view_days())
+
+    # update summary totals for pages
+    sql = """UPDATE tracking_summary t1
+             SET running_total = (
+                SELECT sum(count)
+                FROM tracking_summary t2
+                WHERE t1.package_id = t2.package_id
+                AND t2.tracking_date <= t1.tracking_date
+             ) + t1.count
+             ,recent_views = (
+                SELECT sum(count)
+                FROM tracking_summary t2
+                WHERE t1.package_id = t2.package_id
+                AND t2.tracking_date <= t1.tracking_date AND t2.tracking_date >= t1.tracking_date - %s
+             ) + t1.count
+             WHERE t1.running_total = 0 AND tracking_type = 'page'
+             AND t1.package_id IS NOT NULL
+             AND t1.package_id != '~~not~found~~';"""
+    engine.execute(sql, _recent_view_days())
