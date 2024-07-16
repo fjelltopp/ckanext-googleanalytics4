@@ -104,4 +104,4 @@ def save_packages_data(packages_data):
                 continue
             db_utils.update_package_visits(item.id, recently, ever)
             log.info("Updated %s with %s visits" % (item.id, visits))
-    model.Session.commit()\
+    model.Session.commit()

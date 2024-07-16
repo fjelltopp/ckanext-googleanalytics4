@@ -4,7 +4,6 @@ import click
 
 import ckan.plugins.toolkit as tk
 import ckan.model as model
-
 from utils import (
     db as db_utils,
     ga as ga_utils
