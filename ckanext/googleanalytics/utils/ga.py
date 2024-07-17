@@ -10,7 +10,8 @@ import ckan.model as model
 from . import (
     RESOURCE_URL_REGEX, PACKAGE_URL,
     _resource_url_tag,
-    _recent_view_days
+    _recent_view_days,
+    db as db_utils
 )
 
 
@@ -72,11 +73,11 @@ def get_packages_data(service):
 def save_packages_data(packages_data):
     """Save tuples of packages_data to the database"""
     def save_resource(resource_id, visits):
-        dbutil.update_resource_visits(resource_id, visits["recent"], visits["ever"])
+        db_utils.update_resource_visits(resource_id, visits["recent"], visits["ever"])
         log.info("Updated resource %s with %s visits" % (resource.id, visits))
 
     def save_package(package_id, visits):
-        dbutil.update_package_visits(package_id, visits["recent"], visits["ever"])
+        db_utils.update_package_visits(package_id, visits["recent"], visits["ever"])
         log.info("Updated package %s with %s visits" % (package_id, visits))
     
     packages = {}
