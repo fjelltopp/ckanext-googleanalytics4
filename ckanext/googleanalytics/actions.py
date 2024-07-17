@@ -3,7 +3,7 @@ import json
 
 from utils import db as db_utils
 from ckan.plugins import toolkit
-from utils import (
+from .utils import (
     db as db_utils,
     ga as ga_utils
 )
