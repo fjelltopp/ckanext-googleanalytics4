@@ -69,7 +69,7 @@ def get_packages_data(service):
     return packages
 
 
-def save_ga_data(packages_data):
+def save_packages_data(packages_data):
     """Save tuples of packages_data to the database"""
     def save_resource(resource_id, visits):
         dbutil.update_resource_visits(resource_id, visits["recent"], visits["ever"])
