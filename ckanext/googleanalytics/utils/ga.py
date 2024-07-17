@@ -2,10 +2,10 @@ import httplib2
 import logging
 
 from oauth2client.service_account import ServiceAccountCredentials
-from googleapiclient.discovery import build
-
 from ckan.exceptions import CkanVersionException
+from googleapiclient.discovery import build
 import ckan.plugins.toolkit as tk
+import ckan.model as model
 
 from . import (
     RESOURCE_URL_REGEX, PACKAGE_URL,
