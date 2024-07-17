@@ -69,39 +69,52 @@ def get_packages_data(service):
     return packages
 
 
-def save_packages_data(packages_data):
+def save_ga_data(packages_data):
     """Save tuples of packages_data to the database"""
-    for identifier, visits in list(packages_data.items()):
-        recently = visits.get("recent", 0)
-        ever = visits.get("ever", 0)
+    def save_resource(resource_id, visits):
+        dbutil.update_resource_visits(resource_id, visits["recent"], visits["ever"])
+        log.info("Updated resource %s with %s visits" % (resource.id, visits))
+
+    def save_package(package_id, visits):
+        dbutil.update_package_visits(package_id, visits["recent"], visits["ever"])
+        log.info("Updated package %s with %s visits" % (package_id, visits))
+    
+    packages = {}
+    for identifier, visits in packages_data.items():
         matches = RESOURCE_URL_REGEX.match(identifier)
+        
         if matches:
-            resource_url = identifier[len(_resource_url_tag()) :]
+            resource_url = identifier.replace(matches.group(1), "")
+            package_id = matches.group(2)
+            resource_id = matches.group(3)
+            
+            connection = model.Session.connection()
             resource = (
                 model.Session.query(model.Resource)
                 .autoflush(True)
-                .filter_by(id=matches.group(1))
+                .filter(model.Resource.id.like(resource_id + "%"))
                 .first()
             )
             if not resource:
                 log.warning("Couldn't find resource %s" % resource_url)
                 continue
-            db_utils.update_resource_visits(resource.id, recently, ever)
-            log.info("Updated %s with %s visits" % (resource.id, visits))
-        else:
-            f = identifier.split("/dataset/")
-            if len(f)>1 :
-                g = f[1].split("/")[0]
-                package_name = g
+
+            # we have a valid resource, we save it
+            save_resource(resource.id, visits)
+            
+            # each resource is associated with a dataset/package it belongs to
+            # therefore to update a package, we watch their corresponding resources
+            if package_id in packages:
+                packages[package_id]["recent"] += visits["recent"]
+                packages[package_id]["ever"] += visits["ever"]
             else:
-               package_name = identifier[len(PACKAGE_URL) :]
-            if "/" in package_name:
-                log.warning("%s not a valid package name" % package_name)
-                continue
-            item = model.Package.get(package_name)
-            if not item:
-                log.warning("Couldn't find package %s" % package_name)
-                continue
-            db_utils.update_package_visits(item.id, recently, ever)
-            log.info("Updated %s with %s visits" % (item.id, visits))
+                packages[package_id] = {
+                    "recent": visits["recent"],
+                    "ever": visits["ever"]
+                }
+        
+        # update packages
+        for package_id, visits in packages.items():
+            save_package(package_id, visits)
+    
     model.Session.commit()
