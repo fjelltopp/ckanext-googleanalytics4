@@ -1,7 +1,6 @@
 import logging
 import json
 
-from utils import db as db_utils
 from ckan.plugins import toolkit
 from .utils import (
     db as db_utils,
