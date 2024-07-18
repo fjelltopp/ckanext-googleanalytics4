@@ -146,7 +146,7 @@ def get_resource_stat(resource_id):
         [resource_stats.c.visits_ever]
     ).where(resource_stats.c.resource_id == resource_id)
     res = connection.execute(s).fetchone()
-    return res
+    return res and res or [0]
 
 def get_package_stat(package_id):
     connection = model.Session.connection()
@@ -155,7 +155,7 @@ def get_package_stat(package_id):
         [package_stats.c.visits_ever]
     ).where(package_stats.c.package_id == package_id)
     res = connection.execute(s).fetchone()
-    return res
+    return res and res or [0]
 
 
 def save_packages(packages_data, summary_date):
