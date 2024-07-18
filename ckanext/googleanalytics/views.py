@@ -4,7 +4,7 @@ import hashlib
 import logging
 import six
 
-from werkzeug.utils import import_string
+from werkzeug.utils import import_string, ImportStringError
 import ckan.views.resource as resource
 import ckan.plugins.toolkit as tk
 import ckan.views.api as api
@@ -61,29 +61,38 @@ ga.add_url_rule(
 
 
 def download(id, resource_id, filename=None, package_type="dataset"):
-    try:
-        from ckanext.blob_storage.blueprints import download as resource_download
-        handler_path = resource_download
-    except ImportError:
-        log.debug("Use default CKAN callback for resource.download")
-        handler_path = resource.download
+    handler_path = tk.config.get("googleanalytics.download_handler")
+    using_default_handler = False
+    
+    if handler_path:
+        try:
+            download_handler = import_string(handler_path)
+        except (ImportError, ImportStringError) as e:
+            log.debug("`download_handler` configured but not found")
+            raise e
+    else:
+        log.debug("`download_handler` not configured, using CKAN's default which is: resource.download")
+        download_handler = resource.download
+        using_default_handler = True
 
     try:
-        _post_analytics(
-            g.user,
-            "CKAN Resource Download Request",
-            "Resource",
-            "Download",
-            resource_id,
-        )
+        _post_analytics(g.user)
     except Exception as e:
         log.error(e)
     
-    return handler_path(
-        id=id,
-        resource_id=resource_id,
-        filename=filename,
-    )
+    if using_default_handler:
+        return download_handler(
+            package_type= 'dataset',
+            id=id,
+            resource_id=resource_id,
+            filename=filename,
+        )
+    else:
+        return download_handler(
+            id=id,
+            resource_id=resource_id,
+            filename=filename,
+        )
 
 
 ga.add_url_rule(
