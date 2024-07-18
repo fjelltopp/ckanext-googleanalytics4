@@ -62,7 +62,7 @@ ga.add_url_rule(
 
 def download(id, resource_id, filename=None, package_type="dataset"):
     try:
-        from ckanext.blob_storage.blueprints import download
+        from ckanext.blob_storage.blueprints import download as resource_download
         handler_path = resource_download
     except ImportError:
         log.debug("Use default CKAN callback for resource.download")
