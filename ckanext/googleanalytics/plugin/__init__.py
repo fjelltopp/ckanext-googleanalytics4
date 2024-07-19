@@ -8,6 +8,7 @@ import ast
 
 from ckanext.googleanalytics.actions import resource_stat , package_stat, download_package_stat
 from ckanext.googleanalytics.plugin.flask_plugin import GAMixinPlugin
+import ckanext.googleanalytics.helpers as googleanalytics_helpers
 from six.moves.urllib.parse import urlencode
 import ckan.plugins.toolkit as tk
 import ckan.lib.helpers as h
@@ -133,7 +134,11 @@ class GoogleAnalyticsPlugin(GAMixinPlugin, p.SingletonPlugin):
         See ITemplateHelpers.
 
         """
-        return {"googleanalytics_header": self.googleanalytics_header}
+        return {
+            "googleanalytics_header": self.googleanalytics_header,
+            'get_package_stats': googleanalytics_helpers.get_package_stats,
+            'get_resource_stats': googleanalytics_helpers.get_resource_stats
+        }
 
     def googleanalytics_header(self):
         """Render the googleanalytics_header snippet for CKAN 2.0 templates.
