@@ -39,6 +39,20 @@ def package_stat(context, data_dict):
     return json.dumps(result)
 
 
+@toolkit.side_effect_free
+def url_stat(context, data_dict):
+    '''
+    Fetch url stats
+    '''
+    url_id = data_dict['url_id']
+    result = 0
+    try:
+        result = db_utils.get_url_stat(url_id)[0]
+    except Exception as e:
+        log.error("URL not found: {}".format(e))
+    return json.dumps(result)
+
+
 def download_package_stat(context, data_dict):
     '''
     Download package stats from Google analytics into the local database
