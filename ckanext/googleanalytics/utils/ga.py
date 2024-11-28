@@ -11,7 +11,7 @@ from . import (
     RESOURCE_URL_REGEX,
     PACKAGE_URL,
     _recent_view_days,
-    db as db_utils
+    db
 )
 
 
@@ -19,7 +19,7 @@ config = tk.config
 log = logging.getLogger(__name__)
 
 
-def init_service(credentials_path):
+def _init_service(credentials_path):
     scopes = ["https://www.googleapis.com/auth/analytics.readonly"]
     credentials = ServiceAccountCredentials.from_json_keyfile_name(credentials_path, scopes)
     http = httplib2.Http()
@@ -29,65 +29,7 @@ def init_service(credentials_path):
     return service
 
 
-def get_urls_data(service):
-    urls = {}
-    property_id = tk.config.get("googleanalytics.property_id")
-    dates = {
-        "recent": {"startDate": "{}daysAgo".format(_recent_view_days()), "endDate": "today"},
-        "ever": {"startDate": "2024-01-01", "endDate": "today"}
-    }
-    
-    for date_name, date in dates.items():
-        request_body = {
-            "requests": [{
-                "dateRanges": [date],
-                "metrics": [{"name": "eventCount"}],
-                "dimensions": [{"name": "eventName"}, {"name": "pagePath"}]
-            }]
-        }
-        
-        response = service.properties().batchRunReports(
-            body=request_body, property='properties/{}'.format(property_id)
-        ).execute()
-        
-        for report in response.get('reports', []):
-            for row in report.get('rows', []):
-                event_category = row['dimensionValues'][0].get('value', '')
-                event_label = row['dimensionValues'][1].get('value', '')
-                event_count = row['metricValues'][0].get('value', 0)
-
-                if event_category == "page_view":
-                    url = event_label
-                    views = event_count
-                    count = 0
-                    if url in urls and date_name in urls[url]:
-                        count += urls[url][date_name]
-                    urls.setdefault(url, {})[date_name] = int(views) + count
-
-    return urls
-
-
-def save_urls_data(urls_data):
-    """Save tuples of urls_data to the database"""
-    urls = {}
-    for url_id, visits in urls_data.items():
-        if url_id in urls:
-            urls[url_id]["recent"] += visits.get("recent", 0)
-            urls[url_id]["ever"] += visits.get("ever", 0)
-        else:
-            urls[url_id] = {
-                "recent": visits.get("recent", 0),
-                "ever": visits.get("ever", 0)
-            }
-    
-    for url_id, visits in urls.items():
-        db_utils.update_url_visits(url_id, visits["recent"], visits["ever"])
-        log.info("Updated URL path %s with %s visits" % (url_id, visits))
-    
-    model.Session.commit()
-
-
-def get_packages_data(service):
+def _get_packages_data(service):
     packages = {}
     property_id = tk.config.get("googleanalytics.property_id")
     dates = {
@@ -128,15 +70,15 @@ def get_packages_data(service):
     return packages
 
 
-def save_packages_data(packages_data):
+def _save_packages_data(packages_data):
     """Save tuples of packages_data to the database"""
-    def save_resource(resource_id, visits):
-        db_utils.update_resource_visits(resource_id, visits["recent"], visits["ever"])
-        log.info("Updated resource %s with %s visits" % (resource.id, visits))
-
     def save_package(package_id, visits):
-        db_utils.update_package_visits(package_id, visits["recent"], visits["ever"])
+        db._update_visits("package_stats", package_id, visits["recent"], visits["ever"])
         log.info("Updated package %s with %s visits" % (package_id, visits))
+
+    def save_resource(resource_id, visits):
+        db._update_visits("resource_stats", resource_id, visits["recent"], visits["ever"])
+        log.info("Updated resource %s with %s visits" % (resource.id, visits))
     
     packages = {}
     for identifier, visits in packages_data.items():
@@ -176,4 +118,58 @@ def save_packages_data(packages_data):
         for package_id, visits in packages.items():
             save_package(package_id, visits)
     
-    model.Session.commit()
+
+def _get_urls_data(service):
+    urls = {}
+    property_id = tk.config.get("googleanalytics.property_id")
+    dates = {
+        "recent": {"startDate": "{}daysAgo".format(_recent_view_days()), "endDate": "today"},
+        "ever": {"startDate": "2024-01-01", "endDate": "today"}
+    }
+    
+    for date_name, date in dates.items():
+        request_body = {
+            "requests": [{
+                "dateRanges": [date],
+                "metrics": [{"name": "eventCount"}],
+                "dimensions": [{"name": "eventName"}, {"name": "pagePath"}]
+            }]
+        }
+        
+        response = service.properties().batchRunReports(
+            body=request_body, property='properties/{}'.format(property_id)
+        ).execute()
+        
+        for report in response.get('reports', []):
+            for row in report.get('rows', []):
+                event_category = row['dimensionValues'][0].get('value', '')
+                event_label = row['dimensionValues'][1].get('value', '')
+                event_count = row['metricValues'][0].get('value', 0)
+
+                if event_category == "page_view":
+                    url = event_label
+                    views = event_count
+                    count = 0
+                    if url in urls and date_name in urls[url]:
+                        count += urls[url][date_name]
+                    urls.setdefault(url, {})[date_name] = int(views) + count
+
+    return urls
+
+
+def _save_urls_data(urls_data):
+    """Save tuples of urls_data to the database"""
+    urls = {}
+    for url_id, visits in urls_data.items():
+        if url_id in urls:
+            urls[url_id]["recent"] += visits.get("recent", 0)
+            urls[url_id]["ever"] += visits.get("ever", 0)
+        else:
+            urls[url_id] = {
+                "recent": visits.get("recent", 0),
+                "ever": visits.get("ever", 0)
+            }
+    
+    for url_id, visits in urls.items():
+        db._update_visits("url_stats", url_id, visits["recent"], visits["ever"])
+        log.info("Updated URL path %s with %s visits" % (url_id, visits))
