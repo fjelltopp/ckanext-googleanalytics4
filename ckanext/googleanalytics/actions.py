@@ -60,5 +60,5 @@ def download_package_stat(context, data_dict):
     Download package stats from Google analytics into the local database
     """
     credentials = data_dict["credentials_path"]
-    packages_data = ckanext.googleanalytics(credentials)
+    packages_data = load_package_stats(credentials)
     return json.dumps({"package_count": len(packages_data)})
