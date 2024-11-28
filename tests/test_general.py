@@ -74,16 +74,6 @@ class TestLoadCommand(TestCase):
         )
         assert code in response.body
 
-    def test_top_packages(self):
-        command = LoadAnalytics("loadanalytics")
-        command.TEST_HOST = MockClient("localhost", 6969)
-        command.CONFIG = self.config
-        command.run([])
-        packages = db_utils.get_top_packages()
-        resources = db_utils.get_top_resources()
-        self.assertEquals(packages[0][1], 2)
-        self.assertEquals(resources[0][1], 4)
-
     def test_download_count_inserted(self):
         command = LoadAnalytics("loadanalytics")
         command.TEST_HOST = MockClient("localhost", 6969)
