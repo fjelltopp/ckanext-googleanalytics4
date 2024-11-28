@@ -39,6 +39,14 @@ def load(credentials, start_date):
     in a local database
     """
     service = ga_utils.init_service(credentials)
+    
+    # Get and save resource and dataset download information
     packages_data = ga_utils.get_packages_data(service)
     ga_utils.save_packages_data(packages_data)
-    log.info("Saved %s records from google" % len(packages_data))
+    
+    # Get and save url views information
+    urls_data = ga_utils.get_urls_data(service)
+    ga_utils.save_urls_data(urls_data)
+    
+    log.info("Saved %s packages visits from google" % len(packages_data))
+    log.info("Saved %s urls visits from google" % len(urls_data))
