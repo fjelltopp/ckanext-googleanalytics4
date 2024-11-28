@@ -8,7 +8,7 @@ from ckanext.googleanalytics.model import (
     get_resource_stat,
     get_url_stat,
 )
-from ckanext.googleanalytics.logic import load_package_stats
+from ckanext.googleanalytics.logic import load_package_stats, load_url_stats
 
 log = logging.getLogger(__name__)
 
@@ -62,3 +62,12 @@ def download_package_stat(context, data_dict):
     credentials = data_dict["credentials_path"]
     packages_data = load_package_stats(credentials)
     return json.dumps({"package_count": len(packages_data)})
+
+
+def download_url_stat(context, data_dict):
+    """
+    Download URL stats from Google analytics into the local database
+    """
+    credentials = data_dict["credentials_path"]
+    urls_data = load_url_stats(credentials)
+    return json.dumps({"url_count": len(urls_data)})

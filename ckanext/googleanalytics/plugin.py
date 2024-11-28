@@ -31,6 +31,7 @@ class GoogleAnalyticsPlugin(plugins.SingletonPlugin):
             "package_stats": ga_actions.package_stat,
             "url_stats": ga_actions.url_stat,
             "download_package_stats": ga_actions.download_package_stat,
+            "download_url_stats": ga_actions.download_url_stat,
         }
 
     # IBlueprint
