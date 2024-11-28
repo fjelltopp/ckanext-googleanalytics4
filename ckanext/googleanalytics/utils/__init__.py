@@ -3,10 +3,12 @@ import re
 import ckan.plugins.toolkit as tk
 
 
-DEFAULT_RESOURCE_URL_TAG    = "/downloads/"
-DEFAULT_RECENT_VIEW_DAYS    = 14
-RESOURCE_URL_REGEX          = re.compile("(/.*/)dataset/([a-z0-9-_]+)/resource/([a-z0-9-_]+)")
-PACKAGE_URL                 = "/dataset/"
+DEFAULT_RESOURCE_URL_TAG = "/downloads/"
+DEFAULT_RECENT_VIEW_DAYS = 14
+RESOURCE_URL_REGEX = re.compile(
+    "(/.*/)dataset/([a-z0-9-_]+)/resource/([a-z0-9-_]+)"
+)
+PACKAGE_URL = "/dataset/"
 
 
 def _resource_url_tag():

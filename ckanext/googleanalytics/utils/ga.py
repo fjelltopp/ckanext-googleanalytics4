@@ -7,12 +7,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 import ckan.model as model
 import ckan.plugins.toolkit as tk
 
-from . import (
-    RESOURCE_URL_REGEX,
-    PACKAGE_URL,
-    _recent_view_days,
-    db
-)
+from . import RESOURCE_URL_REGEX, PACKAGE_URL, _recent_view_days, db
 
 
 config = tk.config
@@ -21,11 +16,15 @@ log = logging.getLogger(__name__)
 
 def _init_service(credentials_path):
     scopes = ["https://www.googleapis.com/auth/analytics.readonly"]
-    credentials = ServiceAccountCredentials.from_json_keyfile_name(credentials_path, scopes)
+    credentials = ServiceAccountCredentials.from_json_keyfile_name(
+        credentials_path, scopes
+    )
     http = httplib2.Http()
     http = credentials.authorize(http)
-   
-    service = build('analyticsdata', 'v1beta', http=http, cache_discovery=False)
+
+    service = build(
+        "analyticsdata", "v1beta", http=http, cache_discovery=False
+    )
     return service
 
 
@@ -33,28 +32,37 @@ def _get_packages_data(service):
     packages = {}
     property_id = tk.config.get("googleanalytics.property_id")
     dates = {
-        "recent": {"startDate": "{}daysAgo".format(_recent_view_days()), "endDate": "today"},
-        "ever": {"startDate": "2024-01-01", "endDate": "today"}
+        "recent": {
+            "startDate": "{}daysAgo".format(_recent_view_days()),
+            "endDate": "today",
+        },
+        "ever": {"startDate": "2024-01-01", "endDate": "today"},
     }
 
     for date_name, date in dates.items():
         request_body = {
-            "requests": [{
-                "dateRanges": [date],
-                "metrics": [{"name": "eventCount"}],
-                "dimensions": [{"name": "eventName"}, {"name": "linkUrl"}]
-            }]
+            "requests": [
+                {
+                    "dateRanges": [date],
+                    "metrics": [{"name": "eventCount"}],
+                    "dimensions": [{"name": "eventName"}, {"name": "linkUrl"}],
+                }
+            ]
         }
-        
-        response = service.properties().batchRunReports(
-            body=request_body, property='properties/{}'.format(property_id)
-        ).execute()
-        
-        for report in response.get('reports', []):
-            for row in report.get('rows', []):
-                event_category = row['dimensionValues'][0].get('value', '')
-                event_label = row['dimensionValues'][1].get('value', '')
-                event_count = row['metricValues'][0].get('value', 0)
+
+        response = (
+            service.properties()
+            .batchRunReports(
+                body=request_body, property="properties/{}".format(property_id)
+            )
+            .execute()
+        )
+
+        for report in response.get("reports", []):
+            for row in report.get("rows", []):
+                event_category = row["dimensionValues"][0].get("value", "")
+                event_label = row["dimensionValues"][1].get("value", "")
+                event_count = row["metricValues"][0].get("value", 0)
 
                 if event_category == "file_download":
                     package = event_label
@@ -62,33 +70,43 @@ def _get_packages_data(service):
                     if "/" in package:
                         if not package.startswith(PACKAGE_URL):
                             package = "/" + "/".join(package.split("/")[2:])
-                        
+
                         val = 0
-                        if package in packages and date_name in packages[package]:
+                        if (
+                            package in packages
+                            and date_name in packages[package]
+                        ):
                             val += packages[package][date_name]
-                        packages.setdefault(package, {})[date_name] = int(count) + val
+                        packages.setdefault(package, {})[date_name] = (
+                            int(count) + val
+                        )
     return packages
 
 
 def _save_packages_data(packages_data):
     """Save tuples of packages_data to the database"""
+
     def save_package(package_id, visits):
-        db._update_visits("package_stats", package_id, visits["recent"], visits["ever"])
+        db._update_visits(
+            "package_stats", package_id, visits["recent"], visits["ever"]
+        )
         log.info("Updated package %s with %s visits" % (package_id, visits))
 
     def save_resource(resource_id, visits):
-        db._update_visits("resource_stats", resource_id, visits["recent"], visits["ever"])
+        db._update_visits(
+            "resource_stats", resource_id, visits["recent"], visits["ever"]
+        )
         log.info("Updated resource %s with %s visits" % (resource.id, visits))
-    
+
     packages = {}
     for identifier, visits in packages_data.items():
         matches = RESOURCE_URL_REGEX.match(identifier)
-        
+
         if matches:
             resource_url = identifier.replace(matches.group(1), "")
             package_id = matches.group(2)
             resource_id = matches.group(3)
-            
+
             connection = model.Session.connection()
             resource = (
                 model.Session.query(model.Resource)
@@ -102,7 +120,7 @@ def _save_packages_data(packages_data):
 
             # we have a valid resource, we save it
             save_resource(resource.id, visits)
-            
+
             # each resource is associated with a dataset/package it belongs to
             # therefore to update a package, we watch their corresponding resources
             if package_id in packages:
@@ -111,40 +129,52 @@ def _save_packages_data(packages_data):
             else:
                 packages[package_id] = {
                     "recent": visits["recent"],
-                    "ever": visits["ever"]
+                    "ever": visits["ever"],
                 }
-        
+
         # update packages
         for package_id, visits in packages.items():
             save_package(package_id, visits)
-    
+
 
 def _get_urls_data(service):
     urls = {}
     property_id = tk.config.get("googleanalytics.property_id")
     dates = {
-        "recent": {"startDate": "{}daysAgo".format(_recent_view_days()), "endDate": "today"},
-        "ever": {"startDate": "2024-01-01", "endDate": "today"}
+        "recent": {
+            "startDate": "{}daysAgo".format(_recent_view_days()),
+            "endDate": "today",
+        },
+        "ever": {"startDate": "2024-01-01", "endDate": "today"},
     }
-    
+
     for date_name, date in dates.items():
         request_body = {
-            "requests": [{
-                "dateRanges": [date],
-                "metrics": [{"name": "eventCount"}],
-                "dimensions": [{"name": "eventName"}, {"name": "pagePath"}]
-            }]
+            "requests": [
+                {
+                    "dateRanges": [date],
+                    "metrics": [{"name": "eventCount"}],
+                    "dimensions": [
+                        {"name": "eventName"},
+                        {"name": "pagePath"},
+                    ],
+                }
+            ]
         }
-        
-        response = service.properties().batchRunReports(
-            body=request_body, property='properties/{}'.format(property_id)
-        ).execute()
-        
-        for report in response.get('reports', []):
-            for row in report.get('rows', []):
-                event_category = row['dimensionValues'][0].get('value', '')
-                event_label = row['dimensionValues'][1].get('value', '')
-                event_count = row['metricValues'][0].get('value', 0)
+
+        response = (
+            service.properties()
+            .batchRunReports(
+                body=request_body, property="properties/{}".format(property_id)
+            )
+            .execute()
+        )
+
+        for report in response.get("reports", []):
+            for row in report.get("rows", []):
+                event_category = row["dimensionValues"][0].get("value", "")
+                event_label = row["dimensionValues"][1].get("value", "")
+                event_count = row["metricValues"][0].get("value", 0)
 
                 if event_category == "page_view":
                     url = event_label
@@ -167,9 +197,11 @@ def _save_urls_data(urls_data):
         else:
             urls[url_id] = {
                 "recent": visits.get("recent", 0),
-                "ever": visits.get("ever", 0)
+                "ever": visits.get("ever", 0),
             }
-    
+
     for url_id, visits in urls.items():
-        db._update_visits("url_stats", url_id, visits["recent"], visits["ever"])
+        db._update_visits(
+            "url_stats", url_id, visits["recent"], visits["ever"]
+        )
         log.info("Updated URL path %s with %s visits" % (url_id, visits))

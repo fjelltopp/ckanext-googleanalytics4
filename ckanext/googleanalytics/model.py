@@ -43,7 +43,7 @@ def update_resource_visits(resource_id, recently, ever):
 def update_url_visits(url_id, recently, ever):
     return _update_visits("url_stats", url_id, recently, ever)
 
- 
+
 def get_package_stat(package_id):
     return _get_visits("package_stats", package_id)
 

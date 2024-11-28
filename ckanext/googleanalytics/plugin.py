@@ -21,7 +21,7 @@ class GoogleAnalyticsPlugin(plugins.SingletonPlugin):
     plugins.implements(plugins.IPackageController, inherit=True)
     plugins.implements(plugins.IResourceController, inherit=True)
     plugins.implements(plugins.ITemplateHelpers)
-    
+
     analytics_queue = queue.Queue()
 
     # IActions
@@ -30,9 +30,9 @@ class GoogleAnalyticsPlugin(plugins.SingletonPlugin):
             "resource_stats": ga_actions.resource_stat,
             "package_stats": ga_actions.package_stat,
             "url_stats": ga_actions.url_stat,
-            "download_package_stats": ga_actions.download_package_stat
+            "download_package_stats": ga_actions.download_package_stat,
         }
-    
+
     # IBlueprint
     def get_blueprint(self):
         return blueprints
@@ -48,7 +48,7 @@ class GoogleAnalyticsPlugin(plugins.SingletonPlugin):
                 "Missing googleanalytics.measurement_id in config. One must be set."
             )
         # TODO: Do we still need to submit `gogleanalytics_id` separately?
-        self.googleanalytics_id = config.get('googleanalytics.measurement_id')
+        self.googleanalytics_id = config.get("googleanalytics.measurement_id")
         self.googleanalytics_domain = config.get(
             "googleanalytics.domain", "auto"
         )
@@ -70,9 +70,9 @@ class GoogleAnalyticsPlugin(plugins.SingletonPlugin):
         # to the config dict, otherwise templates seem to get 'true' when they
         # try to read resource_prefix from config.
         if "googleanalytics_resource_prefix" not in config:
-            config[
-                "googleanalytics_resource_prefix"
-            ] = DEFAULT_RESOURCE_URL_TAG
+            config["googleanalytics_resource_prefix"] = (
+                DEFAULT_RESOURCE_URL_TAG
+            )
         self.googleanalytics_resource_prefix = config[
             "googleanalytics_resource_prefix"
         ]
@@ -96,7 +96,7 @@ class GoogleAnalyticsPlugin(plugins.SingletonPlugin):
             t = AnalyticsPostThread(self.analytics_queue)
             t.setDaemon(True)
             t.start()
-        
+
     # IConfigurer
     def update_config(self, config):
         plugins.toolkit.add_template_directory(config, "../templates")
@@ -124,7 +124,7 @@ class GoogleAnalyticsPlugin(plugins.SingletonPlugin):
             "googleanalytics_header": self._googleanalytics_header,
             "get_package_stats": ga_helpers.get_package_stats,
             "get_resource_stats": ga_helpers.get_resource_stats,
-            "get_url_stats": ga_helpers.get_url_stats
+            "get_url_stats": ga_helpers.get_url_stats,
         }
 
     def _googleanalytics_header(self):
@@ -149,7 +149,7 @@ class GoogleAnalyticsPlugin(plugins.SingletonPlugin):
             "googleanalytics_domain": self.googleanalytics_domain,
             "googleanalytics_fields": str(self.googleanalytics_fields),
             "googleanalytics_linked_domains": self.googleanalytics_linked_domains,
-            "googleanalytics_measurement_id": self.googleanalytics_measurment_id
+            "googleanalytics_measurement_id": self.googleanalytics_measurment_id,
         }
         return plugins.toolkit.render_snippet(
             "googleanalytics/snippets/googleanalytics_header.html", data

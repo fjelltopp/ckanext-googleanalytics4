@@ -38,7 +38,7 @@ def _update_visits(table_name, item_id, recently, ever):
             "visits_ever": ever,
         }
         connection.execute(stats.insert().values(**values))
-    
+
     model.Session.commit()
 
 
@@ -47,8 +47,6 @@ def _get_visits(table_name, item_id):
     stats = _get_table(table_name)
     id_col_name = "%s_id" % table_name[: -len("_stats")]
     id_col = getattr(stats.c, id_col_name)
-    s = select(
-        [stats.c.visits_ever]
-    ).where(id_col == item_id)
+    s = select([stats.c.visits_ever]).where(id_col == item_id)
     res = connection.execute(s).fetchone()
     return res and res or [0]
