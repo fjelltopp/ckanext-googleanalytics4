@@ -6,7 +6,7 @@ import logging
 import json
 import ast
 
-from ckanext.googleanalytics.actions import resource_stat , package_stat, download_package_stat
+from ckanext.googleanalytics.actions import resource_stat , package_stat, url_stat, download_package_stat
 from ckanext.googleanalytics.plugin.flask_plugin import GAMixinPlugin
 import ckanext.googleanalytics.helpers as googleanalytics_helpers
 from six.moves.urllib.parse import urlencode
@@ -46,24 +46,24 @@ class AnalyticsPostThread(threading.Thread):
 
 
 class GoogleAnalyticsPlugin(GAMixinPlugin, p.SingletonPlugin):
+    p.implements(p.IActions)
     p.implements(p.IConfigurable)
     p.implements(p.IConfigurer, inherit=True)
+    p.implements(p.IPackageController, inherit=True)
+    p.implements(p.IResourceController, inherit=True)
     p.implements(p.ITemplateHelpers)
-    p.implements(p.IActions)
 
+    # IActions
     def get_actions(self):
         return {
-            'resource_stats': resource_stat,
-            'package_stats': package_stat,
-            'download_package_stats': download_package_stat
+            "resource_stats": resource_stat,
+            "package_stats": package_stat,
+            "url_stats": url_stat,
+            "download_package_stats": download_package_stat
         }
 
+    # IConfigurable
     def configure(self, config):
-        """Load config settings for this extension from config file.
-
-        See IConfigurable.
-
-        """
         if "googleanalytics.measurement_id" not in config:
             msg = "Missing googleanalytics.measurement_id in config. One must be set."
             raise GoogleAnalyticsException(msg)
@@ -119,25 +119,34 @@ class GoogleAnalyticsPlugin(GAMixinPlugin, p.SingletonPlugin):
             t.setDaemon(True)
             t.start()
 
+    # IConfigurer
     def update_config(self, config):
-        """Change the CKAN (Pylons) environment configuration.
-
-        See IConfigurer.
-
-        """
         p.toolkit.add_template_directory(config, "../templates")
-        p.toolkit.add_resource('../assets', 'ckanext-googleanalytics')
+        p.toolkit.add_resource("../assets", "ckanext-googleanalytics")
 
+    # IPackageController (CKAN <= 2.9)
+    # IResourceController (CKAN <= 2.9)
+    def after_delete(self, context, data_dict):
+        # Make sure to delete package/resource visists when the corresponding package/resource is deleted
+        pass
+
+    # IPackageController (CKAN > 2.9)
+    def after_dataset_delete(self, context, data_dict):
+        # Make sure to delete package visists when the corresponding package is deleted
+        pass
+
+    # IResourceController (CKAN > 2.9)
+    def after_resource_delete(self, context, data_dict):
+        # Make sure to delete resource visists when the corresponding resource is deleted
+        pass
+
+    # ITemplateHelpers
     def get_helpers(self):
-        """Return the CKAN 2.0 template helper functions this plugin provides.
-
-        See ITemplateHelpers.
-
-        """
         return {
             "googleanalytics_header": self.googleanalytics_header,
-            'get_package_stats': googleanalytics_helpers.get_package_stats,
-            'get_resource_stats': googleanalytics_helpers.get_resource_stats
+            "get_package_stats": googleanalytics_helpers.get_package_stats,
+            "get_resource_stats": googleanalytics_helpers.get_resource_stats,
+            "get_url_stats": googleanalytics_helpers.get_url_stats
         }
 
     def googleanalytics_header(self):
@@ -156,7 +165,6 @@ class GoogleAnalyticsPlugin(GAMixinPlugin, p.SingletonPlugin):
         if self.enable_user_id and current_user:
             self.googleanalytics_fields["userId"] = str(tk.c.userobj.id)
 
-        ## annonymize IP
         self.googleanalytics_fields["anonymize_ip"] = "true"
         data = {
             "googleanalytics_id": self.googleanalytics_id,
