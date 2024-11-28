@@ -1,6 +1,6 @@
 def numerize(num):
     '''
-    Shows a number is a human readable format.
+    Shows a number in a human readable format.
     Source: https://stackoverflow.com/a/45846841
     '''
     num = float('{:.3g}'.format(num))

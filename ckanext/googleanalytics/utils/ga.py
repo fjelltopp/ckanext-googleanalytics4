@@ -1,15 +1,15 @@
 import httplib2
 import logging
 
-from oauth2client.service_account import ServiceAccountCredentials
 from ckan.exceptions import CkanVersionException
 from googleapiclient.discovery import build
-import ckan.plugins.toolkit as tk
+from oauth2client.service_account import ServiceAccountCredentials
 import ckan.model as model
+import ckan.plugins.toolkit as tk
 
 from . import (
-    RESOURCE_URL_REGEX, PACKAGE_URL,
-    _resource_url_tag,
+    RESOURCE_URL_REGEX,
+    PACKAGE_URL,
     _recent_view_days,
     db as db_utils
 )
@@ -27,6 +27,64 @@ def init_service(credentials_path):
    
     service = build('analyticsdata', 'v1beta', http=http, cache_discovery=False)
     return service
+
+
+def get_urls_data(service):
+    urls = {}
+    property_id = tk.config.get("googleanalytics.property_id")
+    dates = {
+        "recent": {"startDate": "{}daysAgo".format(_recent_view_days()), "endDate": "today"},
+        "ever": {"startDate": "2024-01-01", "endDate": "today"}
+    }
+    
+    for date_name, date in dates.items():
+        request_body = {
+            "requests": [{
+                "dateRanges": [date],
+                "metrics": [{"name": "eventCount"}],
+                "dimensions": [{"name": "eventName"}, {"name": "pagePath"}]
+            }]
+        }
+        
+        response = service.properties().batchRunReports(
+            body=request_body, property='properties/{}'.format(property_id)
+        ).execute()
+        
+        for report in response.get('reports', []):
+            for row in report.get('rows', []):
+                event_category = row['dimensionValues'][0].get('value', '')
+                event_label = row['dimensionValues'][1].get('value', '')
+                event_count = row['metricValues'][0].get('value', 0)
+
+                if event_category == "page_view":
+                    url = event_label
+                    views = event_count
+                    count = 0
+                    if url in urls and date_name in urls[url]:
+                        count += urls[url][date_name]
+                    urls.setdefault(url, {})[date_name] = int(views) + count
+
+    return urls
+
+
+def save_urls_data(urls_data):
+    """Save tuples of urls_data to the database"""
+    urls = {}
+    for url_id, visits in urls_data.items():
+        if url_id in urls:
+            urls[url_id]["recent"] += visits.get("recent", 0)
+            urls[url_id]["ever"] += visits.get("ever", 0)
+        else:
+            urls[url_id] = {
+                "recent": visits.get("recent", 0),
+                "ever": visits.get("ever", 0)
+            }
+    
+    for url_id, visits in urls.items():
+        db_utils.update_url_visits(url_id, visits["recent"], visits["ever"])
+        log.info("Updated URL path %s with %s visits" % (url_id, visits))
+    
+    model.Session.commit()
 
 
 def get_packages_data(service):
