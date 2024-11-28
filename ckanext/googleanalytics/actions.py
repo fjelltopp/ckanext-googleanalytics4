@@ -2,51 +2,72 @@ import logging
 import json
 
 from ckan.plugins import toolkit
-from .utils import (
-    db as db_utils,
-    ga as ga_utils
-)
 
+from ckanext.googleanalytics.model import (
+    get_package_stat,
+    get_resource_stat,
+    get_url_stat,
+)
+from ckanext.googleanalytics.logic import load_package_stats, load_url_stats
 
 log = logging.getLogger(__name__)
 
 
 @toolkit.side_effect_free
-def resource_stat(context, data_dict):
-    '''
-    Fetch resource stats
-    '''
-    resource_id = data_dict['resource_id']
+def package_stat(context, data_dict):
+    """
+    Fetch package stats
+    """
+    package_id = data_dict["package_id"]
     result = 0
     try:
-        result = db_utils.get_resource_stat(resource_id)[0]
+        result = get_package_stat(package_id)[0]
+    except Exception as e:
+        log.error("Package not found: {}".format(e))
+    return json.dumps(result)
+
+
+@toolkit.side_effect_free
+def resource_stat(context, data_dict):
+    """
+    Fetch resource stats
+    """
+    resource_id = data_dict["resource_id"]
+    result = 0
+    try:
+        result = get_resource_stat(resource_id)[0]
     except Exception as e:
         log.error("Resource not found: {}".format(e))
     return json.dumps(result)
 
 
 @toolkit.side_effect_free
-def package_stat(context, data_dict):
-    '''
-    Fetch package stats
-    '''
-    package_id = data_dict['package_id']
+def url_stat(context, data_dict):
+    """
+    Fetch url stats
+    """
+    url_id = data_dict["url_id"]
     result = 0
     try:
-        result = db_utils.get_package_stat(package_id)[0]
+        result = get_url_stat(url_id)[0]
     except Exception as e:
-        log.error("Package not found: {}".format(e))
+        log.error("URL not found: {}".format(e))
     return json.dumps(result)
 
 
 def download_package_stat(context, data_dict):
-    '''
+    """
     Download package stats from Google analytics into the local database
-    '''
-    credentials_path = data_dict['credentials_path']
-    service = ga_utils.init_service(credentials_path)
-    packages_data = ga_utils.get_packages_data(service)
-    ga_utils.save_packages_data(packages_data)
-    return json.dumps({
-        'package_count': len(packages_data)
-    })
+    """
+    credentials = data_dict["credentials_path"]
+    packages_data = load_package_stats(credentials)
+    return json.dumps({"package_count": len(packages_data)})
+
+
+def download_url_stat(context, data_dict):
+    """
+    Download URL stats from Google analytics into the local database
+    """
+    credentials = data_dict["credentials_path"]
+    urls_data = load_url_stats(credentials)
+    return json.dumps({"url_count": len(urls_data)})
