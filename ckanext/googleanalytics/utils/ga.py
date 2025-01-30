@@ -84,7 +84,7 @@ def save_packages_data(packages_data):
     for identifier, visits in packages_data.items():
         matches = RESOURCE_URL_REGEX.match(identifier)
         
-        if matches:
+        if matches and "recent" in visits.keys() and "ever" in visits.keys():
             resource_url = identifier.replace(matches.group(1), "")
             package_id = matches.group(2)
             resource_id = matches.group(3)
